@@ -1,0 +1,709 @@
+// =============================================================
+// ERGONIA — Prisma Schema
+// PostgreSQL, generated client, mapping từ SQL schema đã thiết kế
+// =============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================
+// MODULE 1: USERS & ACCOUNTS
+// =============================================================
+
+enum UserRole {
+  customer
+  admin
+  staff
+}
+
+enum UserStatus {
+  active
+  locked
+}
+
+model User {
+  id           BigInt      @id @default(autoincrement())
+  fullName     String      @map("full_name") @db.VarChar(150)
+  email        String?     @unique @db.VarChar(150)
+  phone        String?     @unique @db.VarChar(20)
+  passwordHash String?     @map("password_hash") @db.VarChar(255)
+  avatarUrl    String?     @map("avatar_url") @db.VarChar(255)
+  role         UserRole    @default(customer)
+  status       UserStatus  @default(active)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  addresses      UserAddress[]
+  carts          Cart[]
+  orders         Order[]
+  quizSessions   QuizSession[]
+  reviews        ProductReview[]
+  blogPosts      BlogPost[]
+  funnelEvents   FunnelEvent[]
+
+  @@map("users")
+}
+
+model UserAddress {
+  id            BigInt  @id @default(autoincrement())
+  userId        BigInt  @map("user_id")
+  recipientName String  @map("recipient_name") @db.VarChar(150)
+  phone         String  @db.VarChar(20)
+  addressLine   String  @map("address_line") @db.VarChar(255)
+  ward          String? @db.VarChar(100)
+  district      String? @db.VarChar(100)
+  province      String? @db.VarChar(100)
+  isDefault     Boolean @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@map("user_addresses")
+}
+
+// =============================================================
+// MODULE 2: MASCOT
+// =============================================================
+
+model MascotCharacter {
+  id          BigInt   @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  avatarUrl   String?  @map("avatar_url") @db.VarChar(255)
+  description String?
+
+  dialogues MascotDialogue[]
+
+  @@map("mascot_characters")
+}
+
+enum DialogueStatus {
+  active
+  inactive
+}
+
+model MascotDialogue {
+  id            BigInt         @id @default(autoincrement())
+  mascotId      BigInt         @map("mascot_id")
+  contextKey    String         @map("context_key") @db.VarChar(100)
+  emotionState  String         @default("neutral") @map("emotion_state") @db.VarChar(30)
+  dialogueText  String         @map("dialogue_text")
+  sortOrder     Int            @default(0) @map("sort_order")
+  status        DialogueStatus @default(active)
+
+  mascot        MascotCharacter @relation(fields: [mascotId], references: [id], onDelete: Cascade)
+  quizQuestions QuizQuestion[]
+
+  @@index([contextKey])
+  @@map("mascot_dialogues")
+}
+
+// =============================================================
+// MODULE 3: CATALOG SẢN PHẨM
+// =============================================================
+
+model Category {
+  id          BigInt     @id @default(autoincrement())
+  name        String     @db.VarChar(100)
+  slug        String     @unique @db.VarChar(120)
+  parentId    BigInt?    @map("parent_id")
+  description String?
+  sortOrder   Int        @default(0) @map("sort_order")
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@map("categories")
+}
+
+enum ProductStatus {
+  active
+  inactive
+  out_of_stock
+}
+
+model Product {
+  id               BigInt        @id @default(autoincrement())
+  sku              String        @unique @db.VarChar(50)
+  name             String        @db.VarChar(200)
+  slug             String        @unique @db.VarChar(220)
+  categoryId       BigInt?       @map("category_id")
+  shortDescription String?       @map("short_description") @db.VarChar(500)
+  description      String?
+  basePrice        Decimal       @map("base_price") @db.Decimal(12, 0)
+  salePrice        Decimal?      @map("sale_price") @db.Decimal(12, 0)
+  stockQuantity    Int           @default(0) @map("stock_quantity")
+  status           ProductStatus @default(active)
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  category              Category?              @relation(fields: [categoryId], references: [id])
+  images                ProductImage[]
+  variants              ProductVariant[]
+  attributes            ProductAttribute[]
+  qrCodes               QrCode[]
+  cartItems             CartItem[]
+  orderItems            OrderItem[]
+  reviews               ProductReview[]
+  painPointGuides       PainPointGuide[]
+  recommendationRules   RecommendationRule[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@map("products")
+}
+
+model ProductImage {
+  id          BigInt  @id @default(autoincrement())
+  productId   BigInt  @map("product_id")
+  imageUrl    String  @map("image_url") @db.VarChar(255)
+  altText     String? @map("alt_text") @db.VarChar(255)
+  sortOrder   Int     @default(0) @map("sort_order")
+  isThumbnail Boolean @default(false) @map("is_thumbnail")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+model ProductVariant {
+  id            BigInt   @id @default(autoincrement())
+  productId     BigInt   @map("product_id")
+  variantName   String   @map("variant_name") @db.VarChar(100)
+  sku           String   @unique @db.VarChar(50)
+  price         Decimal? @db.Decimal(12, 0)
+  stockQuantity Int      @default(0) @map("stock_quantity")
+  imageUrl      String?  @map("image_url") @db.VarChar(255)
+
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@map("product_variants")
+}
+
+model ProductAttribute {
+  id             BigInt @id @default(autoincrement())
+  productId      BigInt @map("product_id")
+  attributeName  String @map("attribute_name") @db.VarChar(100)
+  attributeValue String @map("attribute_value") @db.VarChar(255)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_attributes")
+}
+
+// =============================================================
+// MODULE 4: QR CODE
+// =============================================================
+
+enum QrCodeStatus {
+  active
+  inactive
+}
+
+model QrCode {
+  id          BigInt       @id @default(autoincrement())
+  codeValue   String       @unique @map("code_value") @db.VarChar(100)
+  productId   BigInt?      @map("product_id")
+  batchName   String?      @map("batch_name") @db.VarChar(100)
+  landingUrl  String       @map("landing_url") @db.VarChar(255)
+  status      QrCodeStatus @default(active)
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  product      Product?      @relation(fields: [productId], references: [id])
+  scanLogs     QrScanLog[]
+  quizSessions QuizSession[]
+
+  @@index([codeValue])
+  @@map("qr_codes")
+}
+
+model QrScanLog {
+  id          BigInt   @id @default(autoincrement())
+  qrCodeId    BigInt   @map("qr_code_id")
+  sessionToken String  @map("session_token") @db.VarChar(100)
+  deviceInfo  String?  @map("device_info") @db.VarChar(255)
+  ipAddress   String?  @map("ip_address") @db.VarChar(50)
+  scannedAt   DateTime @default(now()) @map("scanned_at")
+
+  qrCode QrCode @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+
+  @@index([sessionToken])
+  @@map("qr_scan_logs")
+}
+
+// =============================================================
+// MODULE 5: QUIZ
+// =============================================================
+
+enum QuizType {
+  main
+  extended
+}
+
+enum QuizStatus {
+  active
+  inactive
+}
+
+model Quiz {
+  id          BigInt     @id @default(autoincrement())
+  name        String     @db.VarChar(150)
+  description String?
+  quizType    QuizType   @default(main) @map("quiz_type")
+  status      QuizStatus @default(active)
+
+  questions    QuizQuestion[]
+  sessions     QuizSession[]
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id                BigInt     @id @default(autoincrement())
+  quizId            BigInt     @map("quiz_id")
+  questionText      String     @map("question_text")
+  mascotDialogueId  BigInt?    @map("mascot_dialogue_id")
+  sortOrder         Int        @default(0) @map("sort_order")
+  status            QuizStatus @default(active)
+
+  quiz            Quiz            @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  mascotDialogue  MascotDialogue? @relation(fields: [mascotDialogueId], references: [id])
+  options         QuizOption[]
+  responses       QuizResponse[]
+  incomingOptions QuizOption[]    @relation("QuizOptionBranch")
+
+  @@map("quiz_questions")
+}
+
+model QuizOption {
+  id                BigInt  @id @default(autoincrement())
+  questionId        BigInt  @map("question_id")
+  optionLabel       String? @map("option_label") @db.VarChar(10)
+  optionText        String  @map("option_text") @db.VarChar(255)
+  resultText        String? @map("result_text")
+  recommendedAction String? @map("recommended_action") @db.VarChar(255)
+  nextQuestionId    BigInt? @map("next_question_id")
+  sortOrder         Int     @default(0) @map("sort_order")
+
+  question        QuizQuestion          @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  nextQuestion    QuizQuestion?         @relation("QuizOptionBranch", fields: [nextQuestionId], references: [id])
+  responses       QuizResponse[]
+  recommendations RecommendationRule[]
+
+  @@map("quiz_options")
+}
+
+model QuizSession {
+  id           BigInt    @id @default(autoincrement())
+  sessionToken String    @map("session_token") @db.VarChar(100)
+  userId       BigInt?   @map("user_id")
+  quizId       BigInt    @map("quiz_id")
+  qrCodeId     BigInt?   @map("qr_code_id")
+  startedAt    DateTime  @default(now()) @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+
+  user      User?        @relation(fields: [userId], references: [id])
+  quiz      Quiz         @relation(fields: [quizId], references: [id])
+  qrCode    QrCode?      @relation(fields: [qrCodeId], references: [id])
+  responses QuizResponse[]
+  orders    Order[]
+
+  @@index([sessionToken])
+  @@map("quiz_sessions")
+}
+
+model QuizResponse {
+  id          BigInt   @id @default(autoincrement())
+  sessionId   BigInt   @map("session_id")
+  questionId  BigInt   @map("question_id")
+  optionId    BigInt   @map("option_id")
+  answeredAt  DateTime @default(now()) @map("answered_at")
+
+  session  QuizSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question QuizQuestion @relation(fields: [questionId], references: [id])
+  option   QuizOption   @relation(fields: [optionId], references: [id])
+
+  @@map("quiz_responses")
+}
+
+// =============================================================
+// MODULE 6: PAIN-POINT MAPPING
+// =============================================================
+
+model BodyPart {
+  id              BigInt  @id @default(autoincrement())
+  code            String  @unique @db.VarChar(30)
+  name            String  @db.VarChar(100)
+  iconPositionX   Int?    @map("icon_position_x")
+  iconPositionY   Int?    @map("icon_position_y")
+
+  guides              PainPointGuide[]
+  recommendationRules RecommendationRule[]
+
+  @@map("body_parts")
+}
+
+model ChairType {
+  id   BigInt @id @default(autoincrement())
+  code String @unique @db.VarChar(30)
+  name String @db.VarChar(100)
+
+  guides PainPointGuide[]
+
+  @@map("chair_types")
+}
+
+enum GuideMediaType {
+  image
+  video
+}
+
+model PainPointGuide {
+  id             BigInt         @id @default(autoincrement())
+  bodyPartId     BigInt         @map("body_part_id")
+  chairTypeId    BigInt         @map("chair_type_id")
+  productId      BigInt?        @map("product_id")
+  guideMediaType GuideMediaType @map("guide_media_type")
+  guideMediaUrl  String         @map("guide_media_url") @db.VarChar(255)
+  instructions   String?
+
+  bodyPart  BodyPart  @relation(fields: [bodyPartId], references: [id])
+  chairType ChairType @relation(fields: [chairTypeId], references: [id])
+  product   Product?  @relation(fields: [productId], references: [id])
+
+  @@unique([bodyPartId, chairTypeId, productId])
+  @@map("pain_point_guides")
+}
+
+// =============================================================
+// MODULE 7: RECOMMENDATION
+// =============================================================
+
+enum SourceType {
+  quiz_option
+  body_part
+}
+
+enum RecommendationType {
+  primary
+  cross_sell
+  upsell
+}
+
+model RecommendationRule {
+  id                   BigInt             @id @default(autoincrement())
+  sourceType           SourceType         @map("source_type")
+  quizOptionId         BigInt?            @map("quiz_option_id")
+  bodyPartId           BigInt?            @map("body_part_id")
+  recommendedProductId BigInt             @map("recommended_product_id")
+  recommendationType   RecommendationType @default(primary) @map("recommendation_type")
+  priority             Int                @default(0)
+
+  recommendedProduct Product     @relation(fields: [recommendedProductId], references: [id])
+  quizOption         QuizOption? @relation(fields: [quizOptionId], references: [id])
+  bodyPart           BodyPart?   @relation(fields: [bodyPartId], references: [id])
+
+  @@map("recommendation_rules")
+}
+
+// =============================================================
+// MODULE 8: GIỎ HÀNG
+// =============================================================
+
+model Cart {
+  id           BigInt   @id @default(autoincrement())
+  userId       BigInt?  @map("user_id")
+  sessionToken String?  @map("session_token") @db.VarChar(100)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user  User?      @relation(fields: [userId], references: [id])
+  items CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id          BigInt  @id @default(autoincrement())
+  cartId      BigInt  @map("cart_id")
+  productId   BigInt  @map("product_id")
+  variantId   BigInt? @map("variant_id")
+  quantity    Int     @default(1)
+  priceAtAdd  Decimal @map("price_at_add") @db.Decimal(12, 0)
+
+  cart    Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product        @relation(fields: [productId], references: [id])
+  variant ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@map("cart_items")
+}
+
+// =============================================================
+// MODULE 9: VOUCHER
+// =============================================================
+
+enum DiscountType {
+  percent
+  fixed
+}
+
+enum VoucherStatus {
+  active
+  inactive
+  expired
+}
+
+model Voucher {
+  id                BigInt        @id @default(autoincrement())
+  code              String        @unique @db.VarChar(50)
+  discountType      DiscountType  @map("discount_type")
+  discountValue     Decimal       @map("discount_value") @db.Decimal(12, 2)
+  minOrderValue     Decimal       @default(0) @map("min_order_value") @db.Decimal(12, 0)
+  maxDiscountAmount Decimal?      @map("max_discount_amount") @db.Decimal(12, 0)
+  usageLimit        Int?          @map("usage_limit")
+  usedCount         Int           @default(0) @map("used_count")
+  startDate         DateTime?     @map("start_date")
+  endDate           DateTime?     @map("end_date")
+  status            VoucherStatus @default(active)
+
+  orders Order[]
+
+  @@map("vouchers")
+}
+
+// =============================================================
+// MODULE 10: ĐƠN HÀNG
+// =============================================================
+
+enum PaymentMethod {
+  cod
+  vnpay
+  momo
+  zalopay
+  bank_transfer
+}
+
+enum PaymentStatus {
+  unpaid
+  paid
+  refunded
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  shipping
+  completed
+  cancelled
+}
+
+model Order {
+  id                BigInt        @id @default(autoincrement())
+  orderCode         String        @unique @map("order_code") @db.VarChar(30)
+  userId            BigInt?       @map("user_id")
+  quizSessionId     BigInt?       @map("quiz_session_id")
+  shippingAddressId BigInt?       @map("shipping_address_id")
+  voucherId         BigInt?       @map("voucher_id")
+  subtotal          Decimal       @db.Decimal(12, 0)
+  discountAmount    Decimal       @default(0) @map("discount_amount") @db.Decimal(12, 0)
+  shippingFee       Decimal       @default(0) @map("shipping_fee") @db.Decimal(12, 0)
+  totalAmount       Decimal       @map("total_amount") @db.Decimal(12, 0)
+  paymentMethod     PaymentMethod @map("payment_method")
+  paymentStatus     PaymentStatus @default(unpaid) @map("payment_status")
+  orderStatus       OrderStatus   @default(pending) @map("order_status")
+  note              String?
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  user            User?               @relation(fields: [userId], references: [id])
+  quizSession     QuizSession?        @relation(fields: [quizSessionId], references: [id])
+  shippingAddress UserAddress?        @relation(fields: [shippingAddressId], references: [id])
+  voucher         Voucher?            @relation(fields: [voucherId], references: [id])
+  items           OrderItem[]
+  statusHistory   OrderStatusHistory[]
+  transactions    PaymentTransaction[]
+  shipments       Shipment[]
+
+  @@index([userId])
+  @@index([orderCode])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                   BigInt  @id @default(autoincrement())
+  orderId              BigInt  @map("order_id")
+  productId            BigInt  @map("product_id")
+  variantId            BigInt? @map("variant_id")
+  productNameSnapshot  String  @map("product_name_snapshot") @db.VarChar(200)
+  unitPrice            Decimal @map("unit_price") @db.Decimal(12, 0)
+  quantity             Int
+  subtotal             Decimal @db.Decimal(12, 0)
+
+  order   Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product        @relation(fields: [productId], references: [id])
+  variant ProductVariant? @relation(fields: [variantId], references: [id])
+  reviews ProductReview[]
+
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id        BigInt   @id @default(autoincrement())
+  orderId   BigInt   @map("order_id")
+  status    String   @db.VarChar(20)
+  note      String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_status_history")
+}
+
+// =============================================================
+// MODULE 11: THANH TOÁN & VẬN CHUYỂN
+// =============================================================
+
+enum TransactionStatus {
+  pending
+  success
+  failed
+}
+
+model PaymentTransaction {
+  id              BigInt            @id @default(autoincrement())
+  orderId         BigInt            @map("order_id")
+  provider        String            @db.VarChar(30)
+  transactionCode String?           @map("transaction_code") @db.VarChar(100)
+  amount          Decimal           @db.Decimal(12, 0)
+  status          TransactionStatus @default(pending)
+  paidAt          DateTime?         @map("paid_at")
+  rawResponse     Json?             @map("raw_response")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payment_transactions")
+}
+
+model ShippingProvider {
+  id   BigInt @id @default(autoincrement())
+  name String @db.VarChar(100)
+  code String @unique @db.VarChar(30)
+
+  shipments Shipment[]
+
+  @@map("shipping_providers")
+}
+
+enum ShipmentStatus {
+  pending
+  picked_up
+  in_transit
+  delivered
+  failed
+}
+
+model Shipment {
+  id           BigInt         @id @default(autoincrement())
+  orderId      BigInt         @map("order_id")
+  providerId   BigInt?        @map("provider_id")
+  trackingCode String?        @map("tracking_code") @db.VarChar(100)
+  status       ShipmentStatus @default(pending)
+  shippedAt    DateTime?      @map("shipped_at")
+  deliveredAt  DateTime?      @map("delivered_at")
+
+  order    Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider ShippingProvider? @relation(fields: [providerId], references: [id])
+
+  @@map("shipments")
+}
+
+// =============================================================
+// MODULE 12: ĐÁNH GIÁ SẢN PHẨM
+// =============================================================
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+model ProductReview {
+  id          BigInt       @id @default(autoincrement())
+  productId   BigInt       @map("product_id")
+  userId      BigInt?      @map("user_id")
+  orderItemId BigInt?      @map("order_item_id")
+  rating      Int
+  comment     String?
+  status      ReviewStatus @default(pending)
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  product   Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User?       @relation(fields: [userId], references: [id])
+  orderItem OrderItem?  @relation(fields: [orderItemId], references: [id])
+  images    ReviewImage[]
+
+  @@index([productId])
+  @@map("product_reviews")
+}
+
+model ReviewImage {
+  id       BigInt @id @default(autoincrement())
+  reviewId BigInt @map("review_id")
+  imageUrl String @map("image_url") @db.VarChar(255)
+
+  review ProductReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("review_images")
+}
+
+// =============================================================
+// MODULE 13: BLOG
+// =============================================================
+
+enum BlogStatus {
+  draft
+  published
+}
+
+model BlogPost {
+  id           BigInt     @id @default(autoincrement())
+  title        String     @db.VarChar(255)
+  slug         String     @unique @db.VarChar(255)
+  content      String
+  thumbnailUrl String?    @map("thumbnail_url") @db.VarChar(255)
+  authorId     BigInt?    @map("author_id")
+  status       BlogStatus @default(draft)
+  publishedAt  DateTime?  @map("published_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  author User? @relation(fields: [authorId], references: [id])
+
+  @@map("blog_posts")
+}
+
+// =============================================================
+// MODULE 14: FUNNEL ANALYTICS
+// =============================================================
+
+model FunnelEvent {
+  id           BigInt   @id @default(autoincrement())
+  sessionToken String   @map("session_token") @db.VarChar(100)
+  userId       BigInt?  @map("user_id")
+  eventType    String   @map("event_type") @db.VarChar(50)
+  eventData    Json?    @map("event_data")
+  occurredAt   DateTime @default(now()) @map("occurred_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([sessionToken])
+  @@index([eventType])
+  @@map("funnel_events")
+}
