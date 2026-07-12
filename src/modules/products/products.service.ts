@@ -1,4 +1,5 @@
 import { prisma } from '../../config/database'
+import { Prisma } from '@prisma/client'
 
 export interface GetProductsFilters {
   sort?: string;
@@ -13,12 +14,12 @@ export const productsService = {
     const limit = filters.limit ? Number(filters.limit) : 8
     const skip = (page - 1) * limit
 
-    const where: any = {}
+    const where: Prisma.ProductWhereInput = { status: 'active' }
     if (filters.category) {
       where.category = { slug: filters.category }
     }
 
-    let orderBy: any = {}
+    let orderBy: Prisma.ProductOrderByWithRelationInput = {}
     if (filters.sort === 'newest') {
       orderBy = { createdAt: 'desc' }
     } else if (filters.sort === 'bestseller') {

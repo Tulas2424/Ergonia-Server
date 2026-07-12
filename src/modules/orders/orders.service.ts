@@ -13,8 +13,19 @@ export const ordersService = {
   async createOrder(data: CreateOrderData) {
     let subtotal = 0;
     
-    const orderItemsData = await Promise.all(data.items.map(async (item) => {
-      const product = await prisma.product.findUnique({ where: { id: BigInt(item.productId) } });
+    const productIds = Array.from(new Set(data.items.map(i => BigInt(i.productId))));
+    const variantIds = Array.from(new Set(data.items.filter(i => i.variantId).map(i => BigInt(i.variantId as number))));
+
+    const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
+    const variants = variantIds.length > 0 
+      ? await prisma.productVariant.findMany({ where: { id: { in: variantIds } } }) 
+      : [];
+
+    const productMap = new Map(products.map(p => [p.id.toString(), p]));
+    const variantMap = new Map(variants.map(v => [v.id.toString(), v]));
+
+    const orderItemsData = data.items.map(item => {
+      const product = productMap.get(item.productId.toString());
       if (!product) {
         const error = new Error(`Product ID ${item.productId} not found`) as any;
         error.statusCode = 404;
@@ -23,7 +34,7 @@ export const ordersService = {
       
       let variantName = '';
       if (item.variantId) {
-        const variant = await prisma.productVariant.findUnique({ where: { id: BigInt(item.variantId) } });
+        const variant = variantMap.get(item.variantId.toString());
         if (variant) {
           variantName = ` - ${variant.variantName}`;
         }
@@ -40,7 +51,7 @@ export const ordersService = {
         quantity: item.quantity,
         subtotal: itemSubtotal
       };
-    }));
+    });
 
     let discountAmount = 0;
     if (data.voucherId) {
@@ -91,5 +102,35 @@ export const ordersService = {
       totalAmount: Number(order.totalAmount),
       orderStatus: order.orderStatus
     };
+  },
+
+  async getMyOrders(userId: number) {
+    return prisma.order.findMany({
+      where: { userId: BigInt(userId) },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        items: true
+      }
+    });
+  },
+
+  async getOrderByCode(code: string, userId: number) {
+    const order = await prisma.order.findFirst({
+      where: { 
+        orderCode: code,
+        userId: BigInt(userId)
+      },
+      include: {
+        items: true
+      }
+    });
+
+    if (!order) {
+      const error = new Error('Không tìm thấy đơn hàng') as any;
+      error.statusCode = 404;
+      throw error;
+    }
+
+    return order;
   }
 };

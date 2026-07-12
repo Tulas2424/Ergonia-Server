@@ -15,5 +15,26 @@ export const ordersController = {
     } catch (error) {
       next(error)
     }
+  },
+
+  async getMyOrders(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const result = await ordersService.getMyOrders(userId);
+      sendSuccess(res, result, 'Thành công');
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getOrderByCode(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const { code } = req.params;
+      const result = await ordersService.getOrderByCode(code as string, userId);
+      sendSuccess(res, result, 'Thành công');
+    } catch (error) {
+      next(error);
+    }
   }
 }

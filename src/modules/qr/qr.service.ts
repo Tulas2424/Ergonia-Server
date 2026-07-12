@@ -8,8 +8,8 @@ export const qrService = {
       include: { product: { include: { images: true } } }
     })
 
-    if (!qrCode || qrCode.status !== 'active') {
-      const error = new Error('QR Code not found or inactive') as any
+    if (!qrCode || qrCode.status !== 'active' || qrCode.product?.status !== 'active') {
+      const error = new Error('QR Code not found or product inactive') as any
       error.statusCode = 404
       throw error
     }

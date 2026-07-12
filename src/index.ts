@@ -1,8 +1,10 @@
+import dotenv from 'dotenv'
+dotenv.config()
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
-import dotenv from 'dotenv'
 import { errorMiddleware } from './middlewares/error.middleware'
+import { prisma } from './config/database'
 
 // Routers
 import authRouter from './modules/auth/auth.router'
@@ -24,7 +26,6 @@ BigInt.prototype.toJSON = function() {
   return Number(this);
 }
 
-dotenv.config()
 const app = express()
 const port = process.env.PORT || 3000
 
@@ -36,7 +37,15 @@ app.use(cors({
 app.use(express.json())
 
 // Health check
-app.get('/', (req, res) => res.json({ status: 'ok', message: 'Ergonia API is running' }))
+app.get('/', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    res.json({ status: 'ok', message: 'Ergonia API is running', database: 'connected' })
+  } catch (error) {
+    console.error('Database connection failed:', error)
+    res.status(503).json({ status: 'error', message: 'Database connection failed' })
+  }
+})
 
 // Routes
 app.use('/api/auth',       authRouter)
