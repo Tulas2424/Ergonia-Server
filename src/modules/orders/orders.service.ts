@@ -100,7 +100,7 @@ export const ordersService = {
 
     const orderCode = `ERG-${Date.now()}`;
 
-    const validPaymentMethods = ['cod', 'vnpay', 'momo', 'zalopay', 'bank_transfer'];
+    const validPaymentMethods = ['cod', 'sepay', 'bank_transfer'];
     const paymentMethod = validPaymentMethods.includes(data.paymentMethod) 
       ? data.paymentMethod as PaymentMethod 
       : 'cod';
@@ -140,10 +140,11 @@ export const ordersService = {
     }
 
     let paymentUrl = null;
-    if (order.paymentMethod === 'vnpay') {
-      paymentUrl = paymentsService.createVNPayUrl({ orderCode: order.orderCode, totalAmount: Number(order.totalAmount) });
-    } else if (order.paymentMethod === 'momo') {
-      paymentUrl = await paymentsService.createMoMoUrl({ orderCode: order.orderCode, totalAmount: Number(order.totalAmount) });
+    if (order.paymentMethod === 'sepay') {
+      paymentUrl = await paymentsService.createSePayUrl({
+        orderCode: order.orderCode,
+        totalAmount: Number(order.totalAmount)
+      });
     }
 
     return {

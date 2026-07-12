@@ -33,7 +33,15 @@ export const loginSchema = z.object({
 
 export const createOrderSchema = z.object({
   shippingAddressId: z.number().optional(),
-  paymentMethod: z.string(),
+  shippingAddress: z.object({
+    recipientName: z.string().min(1),
+    phone: z.string().min(9),
+    addressLine: z.string().min(1),
+    ward: z.string().optional(),
+    district: z.string().optional(),
+    province: z.string().optional(),
+  }).optional(),
+  paymentMethod: z.enum(['cod', 'sepay', 'bank_transfer']),
   voucherId: z.number().optional(),
   items: z.array(z.object({
     productId: z.number(),
