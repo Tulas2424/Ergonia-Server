@@ -485,10 +485,8 @@ model Voucher {
 
 enum PaymentMethod {
   cod
-  vnpay
-  momo
-  zalopay
   bank_transfer
+  sepay
 }
 
 enum PaymentStatus {

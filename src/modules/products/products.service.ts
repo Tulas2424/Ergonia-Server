@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 export interface GetProductsFilters {
   sort?: string;
   category?: string;
+  search?: string;
   limit?: number;
   page?: number;
 }
@@ -17,6 +18,9 @@ export const productsService = {
     const where: Prisma.ProductWhereInput = { status: 'active' }
     if (filters.category) {
       where.category = { slug: filters.category }
+    }
+    if (filters.search) {
+      where.name = { contains: filters.search, mode: 'insensitive' }
     }
 
     let orderBy: Prisma.ProductOrderByWithRelationInput = {}

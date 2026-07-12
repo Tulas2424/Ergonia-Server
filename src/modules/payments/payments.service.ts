@@ -1,6 +1,4 @@
-import crypto from 'crypto'
 import axios from 'axios'
-import { prisma } from '../../config/database'
 
 export const paymentsService = {
   async createSePayUrl(order: { orderCode: string; totalAmount: number }) {
