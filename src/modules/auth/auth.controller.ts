@@ -30,5 +30,25 @@ export const authController = {
     } catch (error) {
       next(error)
     }
+  },
+
+  async updateProfile(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id
+      const result = await authService.updateProfile(userId, req.body)
+      sendSuccess(res, result, 'Cập nhật thông tin thành công')
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  async changePassword(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id
+      const result = await authService.changePassword(userId, req.body)
+      sendSuccess(res, result, 'Đổi mật khẩu thành công')
+    } catch (error) {
+      next(error)
+    }
   }
 }

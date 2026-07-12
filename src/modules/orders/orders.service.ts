@@ -1,9 +1,12 @@
 import { prisma } from '../../config/database'
 import { PaymentMethod } from '@prisma/client'
+import { sendOrderConfirmationEmail } from '../../utils/mailer'
+import { paymentsService } from '../payments/payments.service'
 
 export interface CreateOrderData {
   userId: number;
   shippingAddressId?: number;
+  shippingAddress?: { recipientName: string; phone: string; addressLine: string; ward?: string; district?: string; province?: string };
   paymentMethod: string;
   voucherId?: number;
   items: { productId: number; variantId?: number; quantity: number; unitPrice: number }[];
@@ -13,6 +16,30 @@ export const ordersService = {
   async createOrder(data: CreateOrderData) {
     let subtotal = 0;
     
+    let finalShippingAddressId = data.shippingAddressId ? BigInt(data.shippingAddressId) : null;
+    let shippingAddressString = '';
+
+    if (!finalShippingAddressId && data.shippingAddress) {
+      const newAddress = await prisma.userAddress.create({
+        data: {
+          userId: BigInt(data.userId),
+          recipientName: data.shippingAddress.recipientName,
+          phone: data.shippingAddress.phone,
+          addressLine: data.shippingAddress.addressLine,
+          ward: data.shippingAddress.ward,
+          district: data.shippingAddress.district,
+          province: data.shippingAddress.province
+        }
+      });
+      finalShippingAddressId = newAddress.id;
+      shippingAddressString = `${newAddress.recipientName} - ${newAddress.phone}, ${newAddress.addressLine}, ${newAddress.ward}, ${newAddress.district}, ${newAddress.province}`;
+    } else if (finalShippingAddressId) {
+      const address = await prisma.userAddress.findUnique({ where: { id: finalShippingAddressId } });
+      if (address) {
+        shippingAddressString = `${address.recipientName} - ${address.phone}, ${address.addressLine}, ${address.ward}, ${address.district}, ${address.province}`;
+      }
+    }
+
     const productIds = Array.from(new Set(data.items.map(i => BigInt(i.productId))));
     const variantIds = Array.from(new Set(data.items.filter(i => i.variantId).map(i => BigInt(i.variantId as number))));
 
@@ -82,7 +109,7 @@ export const ordersService = {
       data: {
         orderCode,
         userId: BigInt(data.userId),
-        shippingAddressId: data.shippingAddressId ? BigInt(data.shippingAddressId) : null,
+        shippingAddressId: finalShippingAddressId,
         voucherId: data.voucherId ? BigInt(data.voucherId) : null,
         subtotal,
         discountAmount,
@@ -97,10 +124,33 @@ export const ordersService = {
       }
     });
 
+    const user = await prisma.user.findUnique({ where: { id: BigInt(data.userId) } });
+    if (user && user.email) {
+      sendOrderConfirmationEmail(user.email, {
+        orderCode: order.orderCode,
+        fullName: user.fullName || 'Bạn',
+        items: orderItemsData.map(i => ({
+          productNameSnapshot: i.productNameSnapshot,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice
+        })),
+        totalAmount: Number(order.totalAmount),
+        shippingAddress: shippingAddressString
+      }).catch(err => console.error('Failed to send order email:', err));
+    }
+
+    let paymentUrl = null;
+    if (order.paymentMethod === 'vnpay') {
+      paymentUrl = paymentsService.createVNPayUrl({ orderCode: order.orderCode, totalAmount: Number(order.totalAmount) });
+    } else if (order.paymentMethod === 'momo') {
+      paymentUrl = await paymentsService.createMoMoUrl({ orderCode: order.orderCode, totalAmount: Number(order.totalAmount) });
+    }
+
     return {
       orderCode: order.orderCode,
       totalAmount: Number(order.totalAmount),
-      orderStatus: order.orderStatus
+      orderStatus: order.orderStatus,
+      paymentUrl
     };
   },
 
@@ -109,7 +159,18 @@ export const ordersService = {
       where: { userId: BigInt(userId) },
       orderBy: { createdAt: 'desc' },
       include: {
-        items: true
+        items: {
+          include: {
+            product: {
+              include: {
+                images: {
+                  where: { isThumbnail: true },
+                  take: 1
+                }
+              }
+            }
+          }
+        }
       }
     });
   },
@@ -121,7 +182,18 @@ export const ordersService = {
         userId: BigInt(userId)
       },
       include: {
-        items: true
+        items: {
+          include: {
+            product: {
+              include: {
+                images: {
+                  where: { isThumbnail: true },
+                  take: 1
+                }
+              }
+            }
+          }
+        }
       }
     });
 
@@ -131,6 +203,40 @@ export const ordersService = {
       throw error;
     }
 
-    return order;
+    return {
+      ...order,
+      id: Number(order.id)
+    }
+  },
+
+  async cancelOrder(userId: number, code: string) {
+    const order = await prisma.order.findFirst({
+      where: {
+        orderCode: code,
+        userId: BigInt(userId)
+      }
+    });
+
+    if (!order) {
+      const error = new Error('Không tìm thấy đơn hàng') as any;
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (order.orderStatus !== 'pending') {
+      const error = new Error('Chỉ có thể hủy đơn hàng ở trạng thái Chờ xác nhận') as any;
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: order.id },
+      data: { orderStatus: 'cancelled' }
+    });
+
+    return {
+      ...updatedOrder,
+      id: Number(updatedOrder.id)
+    };
   }
 };

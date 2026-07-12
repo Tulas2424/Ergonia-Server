@@ -8,5 +8,6 @@ const router = Router()
 router.post('/', authenticate, validate(createOrderSchema), ordersController.createOrder)
 router.get('/my', authenticate, ordersController.getMyOrders)
 router.get('/:code', authenticate, ordersController.getOrderByCode)
+router.patch('/:code/cancel', authenticate, ordersController.cancelOrder)
 
 export default router

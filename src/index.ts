@@ -15,20 +15,23 @@ import ordersRouter from './modules/orders/orders.router'
 import quizRouter from './modules/quiz/quiz.router'
 import qrRouter from './modules/qr/qr.router'
 import vouchersRouter from './modules/vouchers/vouchers.router'
+import addressesRouter from './modules/addresses/addresses.router'
+import paymentsRouter from './modules/payments/payments.router'
 
 declare global {
   interface BigInt {
-    toJSON(): number;
+    toJSON(): string;
   }
 }
 
 BigInt.prototype.toJSON = function() {
-  return Number(this);
+  return this.toString();
 }
 
 const app = express()
 const port = process.env.PORT || 3000
 
+// Middleware
 app.use(helmet())
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3001',
@@ -49,13 +52,15 @@ app.get('/', async (req, res) => {
 
 // Routes
 app.use('/api/auth',       authRouter)
-app.use('/api/products',   productsRouter)
 app.use('/api/categories', categoriesRouter)
+app.use('/api/products',   productsRouter)
 app.use('/api/cart',       cartRouter)
 app.use('/api/orders',     ordersRouter)
 app.use('/api/quiz',       quizRouter)
 app.use('/api/qr',         qrRouter)
 app.use('/api/vouchers',   vouchersRouter)
+app.use('/api/addresses',  addressesRouter)
+app.use('/api/payments',   paymentsRouter)
 
 // Global error handler (PHẢI đặt sau tất cả routes)
 app.use(errorMiddleware)

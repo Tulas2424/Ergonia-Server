@@ -36,5 +36,16 @@ export const ordersController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  async cancelOrder(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const { code } = req.params;
+      const result = await ordersService.cancelOrder(userId, code as string);
+      sendSuccess(res, result, 'Hủy đơn hàng thành công');
+    } catch (error) {
+      next(error);
+    }
   }
 }
