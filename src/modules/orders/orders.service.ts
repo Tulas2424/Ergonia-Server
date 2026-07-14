@@ -160,6 +160,7 @@ export const ordersService = {
       where: { userId: BigInt(userId) },
       orderBy: { createdAt: 'desc' },
       include: {
+        shippingAddress: true,
         items: {
           include: {
             product: {
@@ -183,6 +184,7 @@ export const ordersService = {
         userId: BigInt(userId)
       },
       include: {
+        shippingAddress: true,
         items: {
           include: {
             product: {
@@ -204,9 +206,17 @@ export const ordersService = {
       throw error;
     }
 
+    let paymentUrl = null;
+    if (order.paymentMethod === 'sepay' && order.paymentStatus === 'unpaid') {
+      const bankId = process.env.SEPAY_BANK_ID || 'TPBank';
+      const bankAcc = process.env.SEPAY_BANK_ACCOUNT || '1234567890';
+      paymentUrl = `https://qr.sepay.vn/img?bank=${bankId}&acc=${bankAcc}&amount=${Number(order.totalAmount)}&des=${order.orderCode}`;
+    }
+
     return {
       ...order,
-      id: Number(order.id)
+      id: Number(order.id),
+      paymentUrl
     }
   },
 

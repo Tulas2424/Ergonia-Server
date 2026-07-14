@@ -17,6 +17,8 @@ import qrRouter from './modules/qr/qr.router'
 import vouchersRouter from './modules/vouchers/vouchers.router'
 import addressesRouter from './modules/addresses/addresses.router'
 import paymentsRouter from './modules/payments/payments.router'
+import painpointRouter from './modules/painpoint/painpoint.router'
+import mascotRouter from './modules/mascot/mascot.router'
 
 declare global {
   interface BigInt {
@@ -61,6 +63,8 @@ app.use('/api/qr',         qrRouter)
 app.use('/api/vouchers',   vouchersRouter)
 app.use('/api/addresses',  addressesRouter)
 app.use('/api/payments',   paymentsRouter)
+app.use('/api/painpoint',  painpointRouter)
+app.use('/api/mascot',     mascotRouter)
 
 // Global error handler (PHẢI đặt sau tất cả routes)
 app.use(errorMiddleware)

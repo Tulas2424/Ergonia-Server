@@ -1,4 +1,12 @@
 import { Router } from 'express'
+import { paymentsController } from './payments.controller'
+
 const router = Router()
-// Webhook SePay: bỏ qua khi local, sẽ thêm khi lên production
+
+// SePay callback - called when user is redirected back from payment page
+router.get('/callback', paymentsController.handleCallback)
+
+// SePay webhook - server-to-server notification
+router.post('/webhook', paymentsController.handleWebhook)
+
 export default router

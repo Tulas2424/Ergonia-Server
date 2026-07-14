@@ -3,6 +3,7 @@ import { cartController } from './cart.controller'
 
 const router = Router()
 
+router.get('/', cartController.getCart)
 router.post('/items', cartController.addCartItem)
 router.delete('/items/:id', cartController.removeCartItem)
 router.patch('/items/:id', cartController.updateCartItem)

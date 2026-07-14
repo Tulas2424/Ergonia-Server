@@ -9,6 +9,41 @@ export interface AddCartItemData {
 }
 
 export const cartService = {
+  async getCart(userId?: number, sessionToken?: string) {
+    if (!userId && !sessionToken) {
+      return { items: [] }
+    }
+
+    const cartWhere = userId
+      ? { userId: BigInt(userId) }
+      : { sessionToken: sessionToken }
+
+    const cart = await prisma.cart.findFirst({
+      where: cartWhere,
+      include: {
+        items: {
+          include: {
+            product: {
+              include: {
+                images: {
+                  where: { isThumbnail: true },
+                  take: 1
+                }
+              }
+            },
+            variant: true
+          }
+        }
+      }
+    })
+
+    if (!cart) {
+      return { items: [] }
+    }
+
+    return cart
+  },
+
   async addCartItem(data: AddCartItemData) {
     if (!data.userId && !data.sessionToken) {
       const error = new Error('Yêu cầu userId hoặc sessionToken để thao tác giỏ hàng') as any;

@@ -32,7 +32,7 @@ export const loginSchema = z.object({
 })
 
 export const createOrderSchema = z.object({
-  shippingAddressId: z.number().optional(),
+  shippingAddressId: z.coerce.number().optional(),
   shippingAddress: z.object({
     recipientName: z.string().min(1),
     phone: z.string().min(9),
@@ -42,11 +42,11 @@ export const createOrderSchema = z.object({
     province: z.string().optional(),
   }).optional(),
   paymentMethod: z.enum(['cod', 'sepay', 'bank_transfer']),
-  voucherId: z.number().optional(),
+  voucherId: z.coerce.number().optional(),
   items: z.array(z.object({
-    productId: z.number(),
-    variantId: z.number().optional(),
-    quantity: z.number().min(1),
-    unitPrice: z.number()
+    productId: z.coerce.number(),
+    variantId: z.coerce.number().optional(),
+    quantity: z.coerce.number().min(1),
+    unitPrice: z.coerce.number()
   })).min(1, 'Đơn hàng phải có ít nhất 1 sản phẩm')
 })
