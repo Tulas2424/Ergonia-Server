@@ -5,7 +5,7 @@ import { sendSuccess } from '../../utils/response'
 export const mascotController = {
   async getDialogueByContextKey(req: Request, res: Response, next: NextFunction) {
     try {
-      const { contextKey } = req.params
+      const contextKey = req.params.contextKey as string;
       const result = await mascotService.getDialogueByContextKey(contextKey)
 
       if (!result) {
