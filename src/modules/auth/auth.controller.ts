@@ -50,5 +50,25 @@ export const authController = {
     } catch (error) {
       next(error)
     }
+  },
+
+  async forgotPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body
+      const result = await authService.requestPasswordReset(email)
+      sendSuccess(res, result, 'Yêu cầu đặt lại mật khẩu đã được gửi')
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { token, newPassword } = req.body
+      const result = await authService.resetPassword(token, newPassword)
+      sendSuccess(res, result, 'Đổi mật khẩu thành công')
+    } catch (error) {
+      next(error)
+    }
   }
 }

@@ -47,8 +47,7 @@ export const adminProductsService = {
         include: {
           category: true,
           images: {
-            where: { isThumbnail: true },
-            take: 1
+            orderBy: { sortOrder: 'asc' }
           },
           variants: true
         }

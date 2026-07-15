@@ -75,10 +75,15 @@ export const adminQrService = {
       ORDER BY DATE(scanned_at) ASC
     `;
 
-    return result.map(row => ({
-      date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date),
-      count: Number(row.count || 0)
-    }));
+    return {
+      summary: {
+        totalScans: result.reduce((sum, row) => sum + Number(row.count || 0), 0)
+      },
+      dailyStats: result.map(row => ({
+        date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date),
+        _count: { id: Number(row.count || 0) }
+      }))
+    };
   },
 
   async deactivateQrCode(id: number) {

@@ -6,6 +6,7 @@ import adminOrdersRouter from './orders.router';
 import adminProductsRouter from './products.router';
 import adminQuizRouter from './quiz.router';
 import adminQrRouter from './qr.router';
+import { adminCustomersRouter } from './customers.router';
 
 const router = Router();
 
@@ -17,5 +18,6 @@ router.use('/orders', adminOrdersRouter);
 router.use('/products', adminProductsRouter);
 router.use('/quiz', adminQuizRouter);
 router.use('/qr', adminQrRouter);
+router.use('/customers', adminCustomersRouter);
 
 export default router;

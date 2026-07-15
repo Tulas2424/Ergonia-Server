@@ -10,5 +10,7 @@ router.post('/login', validate(loginSchema), authController.login)
 router.get('/me', authenticate, authController.getProfile)
 router.patch('/profile', authenticate, authController.updateProfile)
 router.patch('/password', authenticate, authController.changePassword)
+router.post('/forgot-password', authController.forgotPassword)
+router.post('/reset-password', authController.resetPassword)
 
 export default router

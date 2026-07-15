@@ -60,3 +60,30 @@ export const sendOrderConfirmationEmail = async (to: string, order: {
     `
   })
 }
+
+export const sendPasswordResetEmail = async (to: string, resetLink: string) => {
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || '"Ergonia" <noreply@ergonia.com>',
+    to,
+    subject: '[Ergonia] Yêu cầu đặt lại mật khẩu',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
+        <div style="background: #2D5A4E; padding: 24px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Ergonia</h1>
+        </div>
+        <div style="padding: 32px; background: #ffffff;">
+          <h2 style="color: #333;">Yêu cầu đặt lại mật khẩu</h2>
+          <p>Xin chào,</p>
+          <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản Ergonia của bạn. Nếu bạn là người yêu cầu, vui lòng click vào nút bên dưới để đổi mật khẩu (Link có hiệu lực trong 1 giờ):</p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${resetLink}" style="background-color: #2D5A4E; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Đổi Mật Khẩu Mới</a>
+          </div>
+          <p>Nếu bạn không gửi yêu cầu này, vui lòng bỏ qua email này. Tài khoản của bạn vẫn an toàn.</p>
+        </div>
+        <div style="background:#F5F2EB;padding:16px;text-align:center;font-size:12px;color:#6B6B6B;">
+          © 2026 Ergonia. Sản phẩm công thái học.
+        </div>
+      </div>
+    `
+  })
+}

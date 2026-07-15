@@ -1,6 +1,8 @@
 import { prisma } from '../../config/database'
 import { hashPassword, comparePassword } from '../../utils/hash'
 import { signToken } from '../../utils/jwt'
+import crypto from 'crypto'
+import { sendPasswordResetEmail } from '../../utils/mailer'
 
 export interface RegisterInput {
   fullName: string;
@@ -146,6 +148,64 @@ export const authService = {
     await prisma.user.update({
       where: { id: BigInt(userId) },
       data: { passwordHash: hashedNewPassword }
+    });
+
+    return { success: true, message: 'Đổi mật khẩu thành công' };
+  },
+
+  async requestPasswordReset(email: string) {
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      // Return success anyway to prevent email enumeration
+      return { success: true, message: 'Nếu email tồn tại, link đổi mật khẩu sẽ được gửi đến hộp thư của bạn.' };
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 3600000); // 1 hour from now
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken: token,
+        resetPasswordExpires: expires
+      }
+    });
+
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:8000';
+    const resetLink = `${clientUrl}/reset-password?token=${token}`;
+    await sendPasswordResetEmail(user.email!, resetLink);
+
+    return { success: true, message: 'Nếu email tồn tại, link đổi mật khẩu sẽ được gửi đến hộp thư của bạn.' };
+  },
+
+  async resetPassword(token: string, newPassword: string) {
+    const user = await prisma.user.findFirst({
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: {
+          gt: new Date() // token must not be expired
+        }
+      }
+    });
+
+    if (!user) {
+      const error = new Error('Token không hợp lệ hoặc đã hết hạn') as any;
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null
+      }
     });
 
     return { success: true, message: 'Đổi mật khẩu thành công' };

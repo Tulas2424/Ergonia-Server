@@ -98,7 +98,7 @@ export const ordersService = {
     let totalAmount = subtotal - discountAmount + shippingFee;
     if (totalAmount < 0) totalAmount = 0;
 
-    const orderCode = `ERG-${Date.now()}`;
+    const orderCode = `ERG${Date.now()}`;
 
     const validPaymentMethods = ['cod', 'sepay', 'bank_transfer'];
     const paymentMethod = validPaymentMethods.includes(data.paymentMethod) 
@@ -156,7 +156,7 @@ export const ordersService = {
   },
 
   async getMyOrders(userId: number) {
-    return prisma.order.findMany({
+    const orders = await prisma.order.findMany({
       where: { userId: BigInt(userId) },
       orderBy: { createdAt: 'desc' },
       include: {
@@ -175,6 +175,10 @@ export const ordersService = {
         }
       }
     });
+
+    return JSON.parse(JSON.stringify(orders, (key, value) =>
+      typeof value === 'bigint' ? Number(value) : value
+    ));
   },
 
   async getOrderByCode(code: string, userId: number) {
@@ -243,6 +247,35 @@ export const ordersService = {
     const updatedOrder = await prisma.order.update({
       where: { id: order.id },
       data: { orderStatus: 'cancelled' }
+    });
+
+    return {
+      ...updatedOrder,
+      id: Number(updatedOrder.id)
+    };
+  },
+
+  async updatePaymentStatusByCode(code: string, paymentStatus: 'paid' | 'unpaid') {
+    // Also try to find with dash if it was an old order
+    const oldFormatCode = code.replace(/^ERG(\d+)$/, 'ERG-$1');
+    
+    const order = await prisma.order.findFirst({
+      where: { 
+        OR: [
+          { orderCode: code },
+          { orderCode: oldFormatCode }
+        ]
+      }
+    });
+
+    if (!order) return null;
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: order.id },
+      data: { 
+        paymentStatus,
+        orderStatus: paymentStatus === 'paid' && order.orderStatus === 'pending' ? 'confirmed' : order.orderStatus
+      }
     });
 
     return {

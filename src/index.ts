@@ -37,7 +37,7 @@ const port = process.env.PORT || 3000
 // Middleware
 app.use(helmet())
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3001',
+  origin: process.env.CLIENT_URL || 'http://localhost:8000',
   credentials: true,
 }))
 app.use(express.json())
@@ -74,3 +74,5 @@ app.use(errorMiddleware)
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`)
 })
+
+
