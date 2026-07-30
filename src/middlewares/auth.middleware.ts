@@ -22,6 +22,19 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
   }
 }
 
+export const optionalAuthenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1]
+    try {
+      req.user = verifyToken(token)
+    } catch {
+      // Ignore token verification errors for optional auth
+    }
+  }
+  next()
+}
+
 export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
   if (req.user?.role !== 'admin' && req.user?.role !== 'staff') {
     sendError(res, 'Forbidden', 403)
@@ -29,3 +42,4 @@ export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction
   }
   next()
 }
+

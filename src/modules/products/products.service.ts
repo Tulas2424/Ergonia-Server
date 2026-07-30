@@ -40,14 +40,33 @@ export const productsService = {
           images: true,
           variants: true,
           attributes: true,
-          category: true
+          category: true,
+          reviews: {
+            select: {
+              rating: true
+            }
+          }
         }
       }),
       prisma.product.count({ where })
     ])
 
+    const formattedData = data.map(product => {
+      const reviewCount = product.reviews ? product.reviews.length : 0
+      const averageRating = reviewCount > 0
+        ? Number((product.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount).toFixed(1))
+        : 5.0
+
+      const { reviews, ...rest } = product
+      return {
+        ...rest,
+        rating: averageRating,
+        reviewCount
+      }
+    })
+
     return {
-      data,
+      data: formattedData,
       total,
       page,
       limit
@@ -61,7 +80,12 @@ export const productsService = {
         images: true,
         variants: true,
         attributes: true,
-        category: true
+        category: true,
+        reviews: {
+          select: {
+            rating: true
+          }
+        }
       }
     })
 
@@ -71,6 +95,16 @@ export const productsService = {
       throw error
     }
 
-    return product
+    const reviewCount = product.reviews ? product.reviews.length : 0
+    const averageRating = reviewCount > 0
+      ? Number((product.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount).toFixed(1))
+      : 5.0
+
+    const { reviews, ...rest } = product
+    return {
+      ...rest,
+      rating: averageRating,
+      reviewCount
+    }
   }
 }

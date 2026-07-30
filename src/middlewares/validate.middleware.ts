@@ -40,6 +40,7 @@ export const createOrderSchema = z.object({
     ward: z.string().optional(),
     district: z.string().optional(),
     province: z.string().optional(),
+    email: z.string().email('Email không hợp lệ').optional().or(z.literal('')),
   }).optional(),
   paymentMethod: z.enum(['cod', 'sepay', 'bank_transfer']),
   voucherId: z.coerce.number().optional(),

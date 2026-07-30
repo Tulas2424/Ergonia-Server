@@ -4,9 +4,9 @@ import { sendOrderConfirmationEmail } from '../../utils/mailer'
 import { paymentsService } from '../payments/payments.service'
 
 export interface CreateOrderData {
-  userId: number;
+  userId?: number;
   shippingAddressId?: number;
-  shippingAddress?: { recipientName: string; phone: string; addressLine: string; ward?: string; district?: string; province?: string };
+  shippingAddress?: { recipientName: string; phone: string; addressLine: string; ward?: string; district?: string; province?: string; email?: string };
   paymentMethod: string;
   voucherId?: number;
   items: { productId: number; variantId?: number; quantity: number; unitPrice: number }[];
@@ -16,13 +16,40 @@ export const ordersService = {
   async createOrder(data: CreateOrderData) {
     let subtotal = 0;
     
+    let userId: bigint | null = data.userId ? BigInt(data.userId) : null;
+
+    // If guest checkout (no logged-in userId), auto find or create a user record by phone/email
+    if (!userId && data.shippingAddress) {
+      const { phone, email, recipientName } = data.shippingAddress;
+      const searchConditions: any[] = [];
+      if (phone && phone.trim()) searchConditions.push({ phone: phone.trim() });
+      if (email && email.trim()) searchConditions.push({ email: email.trim() });
+
+      let guestUser = searchConditions.length > 0
+        ? await prisma.user.findFirst({ where: { OR: searchConditions } })
+        : null;
+
+      if (!guestUser) {
+        guestUser = await prisma.user.create({
+          data: {
+            fullName: recipientName || 'Khách vãng lai',
+            phone: phone ? phone.trim() : null,
+            email: email && email.trim() ? email.trim() : null,
+            role: 'customer'
+          }
+        });
+      }
+
+      userId = guestUser.id;
+    }
+
     let finalShippingAddressId = data.shippingAddressId ? BigInt(data.shippingAddressId) : null;
     let shippingAddressString = '';
 
     if (!finalShippingAddressId && data.shippingAddress) {
       const newAddress = await prisma.userAddress.create({
         data: {
-          userId: BigInt(data.userId),
+          userId: userId!,
           recipientName: data.shippingAddress.recipientName,
           phone: data.shippingAddress.phone,
           addressLine: data.shippingAddress.addressLine,
@@ -32,11 +59,11 @@ export const ordersService = {
         }
       });
       finalShippingAddressId = newAddress.id;
-      shippingAddressString = `${newAddress.recipientName} - ${newAddress.phone}, ${newAddress.addressLine}, ${newAddress.ward}, ${newAddress.district}, ${newAddress.province}`;
+      shippingAddressString = `${newAddress.recipientName} - ${newAddress.phone}, ${newAddress.addressLine}, ${newAddress.ward || ''}, ${newAddress.province || ''}`;
     } else if (finalShippingAddressId) {
       const address = await prisma.userAddress.findUnique({ where: { id: finalShippingAddressId } });
       if (address) {
-        shippingAddressString = `${address.recipientName} - ${address.phone}, ${address.addressLine}, ${address.ward}, ${address.district}, ${address.province}`;
+        shippingAddressString = `${address.recipientName} - ${address.phone}, ${address.addressLine}, ${address.ward || ''}, ${address.province || ''}`;
       }
     }
 
@@ -108,7 +135,7 @@ export const ordersService = {
     const order = await prisma.order.create({
       data: {
         orderCode,
-        userId: BigInt(data.userId),
+        userId: userId!,
         shippingAddressId: finalShippingAddressId,
         voucherId: data.voucherId ? BigInt(data.voucherId) : null,
         subtotal,
@@ -124,11 +151,25 @@ export const ordersService = {
       }
     });
 
-    const user = await prisma.user.findUnique({ where: { id: BigInt(data.userId) } });
-    if (user && user.email) {
-      sendOrderConfirmationEmail(user.email, {
+    let targetEmail = null;
+    let targetFullName = 'Bạn';
+
+    if (userId) {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user?.email) {
+        targetEmail = user.email;
+        targetFullName = user.fullName || 'Bạn';
+      }
+    }
+    if (!targetEmail && data.shippingAddress?.email) {
+      targetEmail = data.shippingAddress.email;
+      targetFullName = data.shippingAddress.recipientName || 'Bạn';
+    }
+
+    if (targetEmail) {
+      sendOrderConfirmationEmail(targetEmail, {
         orderCode: order.orderCode,
-        fullName: user.fullName || 'Bạn',
+        fullName: targetFullName,
         items: orderItemsData.map(i => ({
           productNameSnapshot: i.productNameSnapshot,
           quantity: i.quantity,
@@ -181,12 +222,14 @@ export const ordersService = {
     ));
   },
 
-  async getOrderByCode(code: string, userId: number) {
+  async getOrderByCode(code: string, userId?: number) {
+    const whereCondition: any = { orderCode: code };
+    if (userId) {
+      whereCondition.userId = BigInt(userId);
+    }
+
     const order = await prisma.order.findFirst({
-      where: { 
-        orderCode: code,
-        userId: BigInt(userId)
-      },
+      where: whereCondition,
       include: {
         shippingAddress: true,
         items: {

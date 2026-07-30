@@ -6,7 +6,7 @@ import { AuthRequest } from '../../middlewares/auth.middleware'
 export const ordersController = {
   async createOrder(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const userId = req.user!.id
+      const userId = req.user?.id
       const result = await ordersService.createOrder({
         ...req.body,
         userId
@@ -29,7 +29,7 @@ export const ordersController = {
 
   async getOrderByCode(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const userId = req.user!.id;
+      const userId = req.user?.id;
       const { code } = req.params;
       const result = await ordersService.getOrderByCode(code as string, userId);
       sendSuccess(res, result, 'Thành công');

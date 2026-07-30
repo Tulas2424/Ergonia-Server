@@ -20,6 +20,7 @@ import paymentsRouter from './modules/payments/payments.router'
 import painpointRouter from './modules/painpoint/painpoint.router'
 import mascotRouter from './modules/mascot/mascot.router'
 import adminRouter from './modules/admin/admin.router'
+import reviewsRouter from './modules/reviews/reviews.router'
 
 declare global {
   interface BigInt {
@@ -67,6 +68,7 @@ app.use('/api/payments',   paymentsRouter)
 app.use('/api/painpoint',  painpointRouter)
 app.use('/api/mascot',     mascotRouter)
 app.use('/api/admin',      adminRouter)
+app.use('/api/reviews',    reviewsRouter)
 
 // Global error handler (PHẢI đặt sau tất cả routes)
 app.use(errorMiddleware)

@@ -36,7 +36,7 @@ async function main() {
     update: {},
     create: {
       name: 'Ergo',
-      avatarUrl: '/mascot/ergo-default.svg',
+      avatarUrl: '/Mascot/mascot-ao.webp',
       description: 'Người bạn đồng hành công thái học của Ergonia',
     },
   })
