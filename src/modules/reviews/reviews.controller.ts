@@ -8,7 +8,7 @@ export const reviewsController = {
       if (!productId) {
         return res.status(400).json({ error: 'productId is required' })
       }
-      const result = await reviewsService.getProductReviews(BigInt(productId))
+      const result = await reviewsService.getProductReviews(BigInt(productId as string))
       res.json(result)
     } catch (error: any) {
       console.error('Error fetching product reviews:', error)

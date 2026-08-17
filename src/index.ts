@@ -38,7 +38,17 @@ const port = process.env.PORT || 3000
 // Middleware
 app.use(helmet())
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:8000',
+  origin: (origin, callback) => {
+    const allowed = (process.env.CLIENT_URL || 'http://localhost:8000')
+      .split(',')
+      .map(s => s.trim());
+    // Allow requests with no origin (e.g. curl, mobile apps)
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin '${origin}' not allowed`));
+    }
+  },
   credentials: true,
 }))
 app.use(express.json())
