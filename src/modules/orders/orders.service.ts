@@ -151,7 +151,7 @@ export const ordersService = {
       }
     });
 
-    let targetEmail = null;
+    let targetEmail: string | null = null;
     let targetFullName = 'Bạn';
 
     if (userId) {
@@ -180,7 +180,7 @@ export const ordersService = {
       }).catch(err => console.error('Failed to send order email:', err));
     }
 
-    let paymentUrl = null;
+    let paymentUrl: string | null = null;
     if (order.paymentMethod === 'sepay') {
       paymentUrl = await paymentsService.createSePayUrl({
         orderCode: order.orderCode,
@@ -253,7 +253,7 @@ export const ordersService = {
       throw error;
     }
 
-    let paymentUrl = null;
+    let paymentUrl: string | null = null;
     if (order.paymentMethod === 'sepay' && order.paymentStatus === 'unpaid') {
       const bankId = process.env.SEPAY_BANK_ID || 'TPBank';
       const bankAcc = process.env.SEPAY_BANK_ACCOUNT || '1234567890';
